@@ -291,6 +291,13 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
     return saved ? JSON.parse(saved) : DEFAULT_WORK_DOCUMENTS
   })
 
+  // 自由输入模式
+  const [isFreeInputMode, setIsFreeInputMode] = useState(false)
+  const [freeInputText, setFreeInputText] = useState(() => {
+    return localStorage.getItem('freeInputText') || ''
+  })
+  const freeInputRef = useRef<HTMLTextAreaElement>(null)
+
   // 工作文档编辑模式
   const [showDocEditor, setShowDocEditor] = useState(false)
   const [editingDoc, setEditingDoc] = useState<WorkDocument | null>(null)
@@ -300,9 +307,34 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
     localStorage.setItem('workDocuments', JSON.stringify(workDocuments))
   }, [workDocuments])
 
+  // 保存自由输入文本到localStorage
+  useEffect(() => {
+    localStorage.setItem('freeInputText', freeInputText)
+  }, [freeInputText])
+
+  // 切换自由输入模式
+  const toggleFreeInputMode = useCallback(() => {
+    setIsFreeInputMode(prev => {
+      const newMode = !prev
+      if (newMode) {
+        setIsBossMode(false) // 关闭老板模式
+        setTimeout(() => freeInputRef.current?.focus(), 100)
+      }
+      return newMode
+    })
+    setShowBossHint(true)
+    setTimeout(() => setShowBossHint(false), 1500)
+  }, [])
+
   // 切换老板模式
   const toggleBossMode = useCallback(() => {
-    setIsBossMode(prev => !prev)
+    setIsBossMode(prev => {
+      const newMode = !prev
+      if (newMode) {
+        setIsFreeInputMode(false) // 关闭自由输入模式
+      }
+      return newMode
+    })
     setShowBossHint(true)
     setTimeout(() => setShowBossHint(false), 1500)
   }, [])
@@ -315,11 +347,11 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
   // 全局快捷键监听
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // 检查是否在输入框内
+      // 检查是否在输入框内（但自由输入模式下的textarea需要特殊处理）
       const target = e.target as HTMLElement
-      const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+      const isInInput = target.tagName === 'INPUT' || (target.tagName === 'TEXTAREA' && !target.classList.contains('free-input-area')) || target.isContentEditable
 
-      // 如果在输入框内，不触发老板键
+      // 如果在输入框内，不触发快捷键
       if (isInInput) return
 
       // ` 键（波浪线键）或 F1 切换老板模式
@@ -327,20 +359,30 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
         e.preventDefault()
         toggleBossMode()
       }
+      // F2 切换自由输入模式
+      if (e.key === 'F2') {
+        e.preventDefault()
+        toggleFreeInputMode()
+      }
       // 老板模式下，Tab 键切换文档
       if (isBossMode && e.key === 'Tab') {
         e.preventDefault()
         switchWorkDoc()
       }
+      // Escape 键退出自由输入模式
+      if (isFreeInputMode && e.key === 'Escape') {
+        e.preventDefault()
+        setIsFreeInputMode(false)
+      }
     }
 
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [isBossMode, toggleBossMode, switchWorkDoc])
+  }, [isBossMode, isFreeInputMode, toggleBossMode, toggleFreeInputMode, switchWorkDoc])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // 老板模式下不处理打字
-    if (isBossMode) return
+    // 老板模式或自由输入模式下不处理打字
+    if (isBossMode || isFreeInputMode) return
 
     e.preventDefault()
 
@@ -558,7 +600,7 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
       {/* 老板模式切换提示 */}
       {showBossHint && (
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-lg z-50 text-lg font-medium">
-          {isBossMode ? '已切换到工作模式' : '已切换到阅读模式'}
+          {isBossMode ? '已切换到工作模式' : isFreeInputMode ? '已切换到自由输入模式' : '已切换到阅读模式'}
         </div>
       )}
 
@@ -662,26 +704,50 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
               onBlur={handleBlur}
               onClick={handleClick}
             >
-              <div
-                className="whitespace-pre-wrap leading-7 text-base font-serif relative"
-                style={{ fontFamily: '宋体, SimSun, serif', fontSize: '14px', lineHeight: '28px' }}
-              >
-                {currentContent}
-                {isActive && !isBossMode && (
-                  <span
-                    className="inline-block bg-black cursor-blink"
-                    style={{ width: '1px', height: '18px', marginLeft: '1px' }}
-                  />
-                )}
-              </div>
+              {/* 自由输入模式 */}
+              {isFreeInputMode ? (
+                <textarea
+                  ref={freeInputRef}
+                  value={freeInputText}
+                  onChange={(e) => setFreeInputText(e.target.value)}
+                  className="w-full h-full min-h-[800px] outline-none resize-none free-input-area"
+                  style={{ fontFamily: '宋体, SimSun, serif', fontSize: '14px', lineHeight: '28px' }}
+                  placeholder="在此自由输入您的内容...（按 F2 或 Esc 退出）"
+                  autoFocus
+                />
+              ) : (
+                <div
+                  className="whitespace-pre-wrap leading-7 text-base font-serif relative"
+                  style={{ fontFamily: '宋体, SimSun, serif', fontSize: '14px', lineHeight: '28px' }}
+                >
+                  {currentContent}
+                  {isActive && !isBossMode && (
+                    <span
+                      className="inline-block bg-black cursor-blink"
+                      style={{ width: '1px', height: '18px', marginLeft: '1px' }}
+                    />
+                  )}
+                </div>
+              )}
 
               {/* 快捷键提示 */}
               <div className="fixed bottom-16 right-4 flex flex-col gap-1 z-40">
-                {isActive && !isBossMode && (
+                {isActive && !isBossMode && !isFreeInputMode && (
                   <div className="bg-gray-100 border border-gray-300 px-2 py-1 rounded text-xs shadow">
                     {isEnglishMode ? '英' : '中'}
                   </div>
                 )}
+                <button
+                  onClick={toggleFreeInputMode}
+                  className={`px-2 py-1 rounded text-xs shadow transition-colors ${
+                    isFreeInputMode
+                      ? 'bg-orange-500 text-white border border-orange-600'
+                      : 'bg-gray-100 border border-gray-300 hover:bg-gray-200'
+                  }`}
+                  title="按 F2 切换自由输入"
+                >
+                  {isFreeInputMode ? '输入中' : '自由输入'}
+                </button>
                 <button
                   onClick={toggleBossMode}
                   className={`px-2 py-1 rounded text-xs shadow transition-colors ${
@@ -758,8 +824,8 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
                 </div>
               )}
 
-              {/* 空白提示 - 仅非老板模式下显示 */}
-              {!novelContent && !isBossMode && (
+              {/* 空白提示 - 仅非老板模式和非自由输入模式下显示 */}
+              {!novelContent && !isBossMode && !isFreeInputMode && (
                 <div className="text-gray-400 pointer-events-none">
                   <p className="mb-4" style={{ fontFamily: '微软雅黑, sans-serif' }}>
                     点击工具栏 <span className="text-[#185abd] font-medium">"管理内容"</span> 按钮添加小说
@@ -768,13 +834,22 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
                     或点击 <span className="text-[#185abd] font-medium">"AI生成"</span> 让AI为你创作小说
                   </p>
                   <p className="text-sm text-gray-400 mt-8" style={{ fontFamily: '微软雅黑, sans-serif' }}>
-                    提示: 按 ` 键或 F1 可快速切换到工作文档（老板键）
+                    提示: 按 ` 键或 F1 切换老板键 | 按 F2 切换自由输入模式
                   </p>
                 </div>
               )}
 
+              {/* 自由输入模式提示 */}
+              {isFreeInputMode && (
+                <div className="fixed bottom-16 left-4 bg-orange-50 border border-orange-200 px-3 py-2 rounded text-xs shadow z-40">
+                  <div className="font-medium text-orange-700 mb-1">自由输入模式</div>
+                  <div className="text-orange-600">可以真正打字输入内容</div>
+                  <div className="text-orange-500 mt-1">按 F2 或 Esc 退出</div>
+                </div>
+              )}
+
               {/* 阅读完成提示 */}
-              {novelContent && !isBossMode && currentIndex >= novelContent.length && (
+              {novelContent && !isBossMode && !isFreeInputMode && currentIndex >= novelContent.length && (
                 <div className="mt-16 text-center text-gray-400" style={{ fontFamily: '微软雅黑, sans-serif' }}>
                   <p className="text-lg">- 全文完 -</p>
                   <p className="text-sm mt-2">共 {novelContent.length} 字</p>
@@ -782,7 +857,7 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
               )}
 
               {/* 阅读进度提示 */}
-              {novelContent && !isBossMode && !isActive && currentIndex < novelContent.length && (
+              {novelContent && !isBossMode && !isFreeInputMode && !isActive && currentIndex < novelContent.length && (
                 <div
                   className="absolute inset-0 flex items-center justify-center bg-white/80 pointer-events-none"
                   style={{ fontFamily: '微软雅黑, sans-serif' }}
