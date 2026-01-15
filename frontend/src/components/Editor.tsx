@@ -6,9 +6,17 @@ interface EditorProps {
   typingSpeed: number
 }
 
+interface WorkDocument {
+  id: string
+  title: string
+  content: string
+  isCustom: boolean
+}
+
 // 预设的工作文案
-const WORK_DOCUMENTS = [
+const DEFAULT_WORK_DOCUMENTS: WorkDocument[] = [
   {
+    id: 'doc1',
     title: '2024年度工作总结报告',
     content: `2024年度工作总结报告
 
@@ -45,9 +53,11 @@ const WORK_DOCUMENTS = [
 2. 加强时间管理，提高工作效率
 3. 积极参与公司各项活动，增强团队凝聚力
 
-以上是本年度工作总结，不足之处请领导批评指正。`
+以上是本年度工作总结，不足之处请领导批评指正。`,
+    isCustom: false,
   },
   {
+    id: 'doc2',
     title: '项目需求分析文档',
     content: `项目需求分析文档
 
@@ -100,9 +110,11 @@ const WORK_DOCUMENTS = [
 第一阶段（1-2月）：需求调研与分析
 第二阶段（3-5月）：系统设计与开发
 第三阶段（6月）：测试与优化
-第四阶段（7月）：上线与培训`
+第四阶段（7月）：上线与培训`,
+    isCustom: false,
   },
   {
+    id: 'doc3',
     title: '会议纪要',
     content: `会议纪要
 
@@ -148,8 +160,116 @@ const WORK_DOCUMENTS = [
 2. 研发部：完成V2.0测试报告（负责人：刘工，完成时间：12月25日）
 3. 运营部：制定服务流程优化方案（负责人：陈经理，完成时间：12月22日）
 
-会议结束时间：16:00`
-  }
+会议结束时间：16:00`,
+    isCustom: false,
+  },
+  {
+    id: 'doc4',
+    title: '周报 - 第50周',
+    content: `工作周报
+
+报告人：张三
+部门：技术部
+周期：2024年第50周（12月9日-12月13日）
+
+一、本周工作完成情况
+
+1. 完成用户管理模块的接口开发
+   - 实现用户增删改查接口
+   - 完成角色权限分配功能
+   - 编写接口文档
+
+2. 参与项目评审会议2次
+   - 周三参加产品需求评审
+   - 周五参加代码review会议
+
+3. 处理线上问题3个
+   - 修复登录超时问题
+   - 优化数据导出性能
+   - 解决报表显示异常
+
+4. 技术分享1次
+   - 周四分享《微服务架构实践》
+
+二、下周工作计划
+
+1. 开发订单管理模块
+2. 完成单元测试覆盖率提升至80%
+3. 参与系统压力测试
+4. 编写技术方案文档
+
+三、需要协调的事项
+
+1. 需要产品确认订单状态流转规则
+2. 需要运维配合部署测试环境
+
+四、风险与问题
+
+1. 第三方接口响应较慢，可能影响项目进度
+2. 测试环境资源不足，建议扩容
+
+报告日期：2024年12月13日`,
+    isCustom: false,
+  },
+  {
+    id: 'doc5',
+    title: '产品设计说明书',
+    content: `产品设计说明书
+
+产品名称：智能办公助手
+版本：V1.0
+编写人：产品部
+日期：2024年12月
+
+一、产品概述
+
+智能办公助手是一款基于人工智能技术的办公效率提升工具，旨在帮助用户提高日常办公效率，减少重复性工作。
+
+二、目标用户
+
+- 企业白领
+- 行政人员
+- 项目经理
+- 中小企业主
+
+三、核心功能
+
+3.1 智能日程管理
+- 自动识别邮件中的会议安排
+- 智能提醒即将到来的任务
+- 冲突检测与建议
+
+3.2 文档智能处理
+- 自动生成会议纪要
+- 智能整理文档摘要
+- 多格式文档转换
+
+3.3 数据分析报告
+- 自动生成周报/月报
+- 数据可视化展示
+- 趋势分析与预测
+
+四、技术架构
+
+- 前端：React + TypeScript
+- 后端：Node.js + Express
+- 数据库：MongoDB
+- AI引擎：自研NLP模型
+
+五、项目里程碑
+
+- 2025年1月：完成MVP版本
+- 2025年3月：完成内测
+- 2025年5月：正式上线
+
+六、竞品分析
+
+与市场主流产品相比，我们的优势：
+1. 更好的中文理解能力
+2. 更低的使用门槛
+3. 更强的定制化能力`,
+    isCustom: false,
+  },
 ]
 
 const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed }) => {
@@ -166,6 +286,19 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
   const [isBossMode, setIsBossMode] = useState(false)
   const [currentWorkDoc, setCurrentWorkDoc] = useState(0)
   const [showBossHint, setShowBossHint] = useState(false)
+  const [workDocuments, setWorkDocuments] = useState<WorkDocument[]>(() => {
+    const saved = localStorage.getItem('workDocuments')
+    return saved ? JSON.parse(saved) : DEFAULT_WORK_DOCUMENTS
+  })
+
+  // 工作文档编辑模式
+  const [showDocEditor, setShowDocEditor] = useState(false)
+  const [editingDoc, setEditingDoc] = useState<WorkDocument | null>(null)
+
+  // 保存工作文档到localStorage
+  useEffect(() => {
+    localStorage.setItem('workDocuments', JSON.stringify(workDocuments))
+  }, [workDocuments])
 
   // 切换老板模式
   const toggleBossMode = useCallback(() => {
@@ -176,12 +309,19 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
 
   // 切换工作文档
   const switchWorkDoc = useCallback(() => {
-    setCurrentWorkDoc(prev => (prev + 1) % WORK_DOCUMENTS.length)
-  }, [])
+    setCurrentWorkDoc(prev => (prev + 1) % workDocuments.length)
+  }, [workDocuments.length])
 
   // 全局快捷键监听
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 检查是否在输入框内
+      const target = e.target as HTMLElement
+      const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+
+      // 如果在输入框内，不触发老板键
+      if (isInInput) return
+
       // ` 键（波浪线键）或 F1 切换老板模式
       if (e.key === '`' || e.key === 'F1') {
         e.preventDefault()
@@ -315,7 +455,7 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
     (e: MouseEvent) => {
       const target = e.target as HTMLElement
 
-      if (target.closest('.word-editor') || target.closest('.input-method-simulator')) {
+      if (target.closest('.word-editor') || target.closest('.input-method-simulator') || target.closest('.doc-editor-modal')) {
         return
       }
 
@@ -361,9 +501,56 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
     updateInputMethodPosition()
   }, [currentIndex, updateInputMethodPosition])
 
+  // 添加新工作文档
+  const addWorkDocument = () => {
+    const newDoc: WorkDocument = {
+      id: Date.now().toString(),
+      title: '新建工作文档',
+      content: '在此输入您的工作内容...',
+      isCustom: true,
+    }
+    setWorkDocuments(prev => [...prev, newDoc])
+    setEditingDoc(newDoc)
+    setShowDocEditor(true)
+  }
+
+  // 编辑工作文档
+  const editWorkDocument = (doc: WorkDocument) => {
+    setEditingDoc({ ...doc })
+    setShowDocEditor(true)
+  }
+
+  // 保存编辑的文档
+  const saveEditingDoc = () => {
+    if (!editingDoc) return
+    setWorkDocuments(prev => prev.map(d => d.id === editingDoc.id ? editingDoc : d))
+    setShowDocEditor(false)
+    setEditingDoc(null)
+  }
+
+  // 删除工作文档
+  const deleteWorkDocument = (id: string) => {
+    if (workDocuments.length <= 1) {
+      alert('至少保留一个工作文档')
+      return
+    }
+    setWorkDocuments(prev => prev.filter(d => d.id !== id))
+    if (currentWorkDoc >= workDocuments.length - 1) {
+      setCurrentWorkDoc(0)
+    }
+  }
+
+  // 重置为默认文档
+  const resetToDefault = () => {
+    if (confirm('确定要重置为默认工作文档吗？您的自定义文档将被删除。')) {
+      setWorkDocuments(DEFAULT_WORK_DOCUMENTS)
+      setCurrentWorkDoc(0)
+    }
+  }
+
   // 获取当前显示的内容
   const currentContent = isBossMode
-    ? WORK_DOCUMENTS[currentWorkDoc].content
+    ? workDocuments[currentWorkDoc]?.content || ''
     : displayedText
 
   return (
@@ -372,6 +559,63 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
       {showBossHint && (
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-lg z-50 text-lg font-medium">
           {isBossMode ? '已切换到工作模式' : '已切换到阅读模式'}
+        </div>
+      )}
+
+      {/* 工作文档编辑器弹窗 */}
+      {showDocEditor && editingDoc && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 doc-editor-modal">
+          <div className="bg-white rounded-lg shadow-xl w-[800px] max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
+              <h3 className="font-medium">编辑工作文档</h3>
+              <button
+                onClick={() => {
+                  setShowDocEditor(false)
+                  setEditingDoc(null)
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">文档标题</label>
+                <input
+                  type="text"
+                  value={editingDoc.title}
+                  onChange={(e) => setEditingDoc({ ...editingDoc, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">文档内容</label>
+                <textarea
+                  value={editingDoc.content}
+                  onChange={(e) => setEditingDoc({ ...editingDoc, content: e.target.value })}
+                  rows={20}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => {
+                    setShowDocEditor(false)
+                    setEditingDoc(null)
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={saveEditingDoc}
+                  className="px-4 py-2 bg-[#185abd] text-white rounded hover:bg-[#1565c0]"
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -451,11 +695,66 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
                 </button>
               </div>
 
-              {/* 老板模式下的文档切换提示 */}
+              {/* 老板模式下的文档管理面板 */}
               {isBossMode && (
-                <div className="fixed bottom-16 left-4 bg-gray-100 border border-gray-300 px-3 py-2 rounded text-xs shadow z-40">
-                  <div className="font-medium text-gray-700 mb-1">当前文档：{WORK_DOCUMENTS[currentWorkDoc].title}</div>
-                  <div className="text-gray-500">按 Tab 切换文档 | 按 ` 返回阅读</div>
+                <div className="fixed bottom-16 left-4 bg-white border border-gray-300 rounded-lg shadow-lg z-40 w-72">
+                  <div className="px-3 py-2 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <div className="font-medium text-gray-700 text-sm">工作文档管理</div>
+                  </div>
+                  <div className="p-2 max-h-60 overflow-auto">
+                    {workDocuments.map((doc, index) => (
+                      <div
+                        key={doc.id}
+                        className={`flex items-center justify-between p-2 rounded cursor-pointer text-sm ${
+                          currentWorkDoc === index ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => setCurrentWorkDoc(index)}
+                      >
+                        <span className="truncate flex-1">{doc.title}</span>
+                        <div className="flex items-center space-x-1 ml-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              editWorkDocument(doc)
+                            }}
+                            className="p-1 text-gray-500 hover:text-blue-600"
+                            title="编辑"
+                          >
+                            ✎
+                          </button>
+                          {doc.isCustom && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteWorkDocument(doc.id)
+                              }}
+                              className="p-1 text-gray-500 hover:text-red-600"
+                              title="删除"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-2 py-2 border-t border-gray-200 flex justify-between">
+                    <button
+                      onClick={addWorkDocument}
+                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      + 新建文档
+                    </button>
+                    <button
+                      onClick={resetToDefault}
+                      className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      重置默认
+                    </button>
+                  </div>
+                  <div className="px-3 py-2 border-t border-gray-200 text-xs text-gray-500">
+                    按 Tab 快速切换 | 按 ` 返回阅读
+                  </div>
                 </div>
               )}
 

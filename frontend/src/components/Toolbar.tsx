@@ -3,7 +3,7 @@ import {
   Bold, Italic, Underline, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, ChevronDown, Sparkles, Type,
-  Highlighter, PaintBucket
+  Highlighter, PaintBucket, X
 } from 'lucide-react'
 
 interface ToolbarProps {
@@ -13,11 +13,76 @@ interface ToolbarProps {
 
 const Toolbar: React.FC<ToolbarProps> = ({ onSaveClick, onAIClick }) => {
   const [activeTab, setActiveTab] = useState('开始')
+  const [showHelp, setShowHelp] = useState(false)
 
   const tabs = ['文件', '开始', '插入', '绘图', '设计', '布局', '引用', '邮件', '审阅', '视图', '帮助']
 
   return (
     <div className="bg-white border-b border-[#d1d1d1] select-none">
+      {/* 帮助弹窗 */}
+      {showHelp && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-[600px] max-h-[80vh] overflow-auto">
+            <div className="sticky top-0 bg-[#185abd] text-white px-4 py-3 flex items-center justify-between rounded-t-lg">
+              <h3 className="font-medium">WordNovel 使用帮助</h3>
+              <button onClick={() => setShowHelp(false)} className="hover:bg-white/20 p-1 rounded">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <h4 className="font-bold text-lg text-gray-800 mb-3">基本使用</h4>
+                <ul className="space-y-2 text-gray-600">
+                  <li>• 点击 <span className="text-[#185abd] font-medium">管理内容</span> 添加或导入小说</li>
+                  <li>• 点击 <span className="text-[#185abd] font-medium">AI生成</span> 让AI为你创作小说</li>
+                  <li>• 随意打字即可推进小说内容显示</li>
+                  <li>• 按 <kbd className="px-1.5 py-0.5 bg-gray-100 border rounded text-sm">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-gray-100 border rounded text-sm">空格</kbd> 切换中/英文输入</li>
+                </ul>
+              </div>
+
+              <div className="border-t pt-6">
+                <h4 className="font-bold text-lg text-gray-800 mb-3">🚨 老板键功能（重点！）</h4>
+                <p className="text-gray-600 mb-3">
+                  当老板走过来时，一键切换到正经工作文档，完美伪装！
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <kbd className="px-2 py-1 bg-white border-2 border-gray-300 rounded font-mono text-lg">`</kbd>
+                    <span className="text-gray-500">或</span>
+                    <kbd className="px-2 py-1 bg-white border-2 border-gray-300 rounded font-mono">F1</kbd>
+                    <span className="text-gray-700 font-medium">→ 一键切换工作/阅读模式</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <kbd className="px-2 py-1 bg-white border-2 border-gray-300 rounded font-mono">Tab</kbd>
+                    <span className="text-gray-700">→ 工作模式下切换不同文档</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-6">
+                <h4 className="font-bold text-lg text-gray-800 mb-3">工作文档管理</h4>
+                <ul className="space-y-2 text-gray-600">
+                  <li>• 内置5个预设工作文档（年度总结、项目文档、会议纪要等）</li>
+                  <li>• 支持 <span className="text-[#185abd] font-medium">新建</span> 自定义工作文档</li>
+                  <li>• 支持 <span className="text-[#185abd] font-medium">编辑</span> 任意工作文档内容</li>
+                  <li>• 支持 <span className="text-[#185abd] font-medium">删除</span> 自定义文档</li>
+                  <li>• 工作文档自动保存到浏览器本地存储</li>
+                </ul>
+              </div>
+
+              <div className="border-t pt-6">
+                <h4 className="font-bold text-lg text-gray-800 mb-3">AI生成功能</h4>
+                <ul className="space-y-2 text-gray-600">
+                  <li>• 需要配置通义千问 API Key</li>
+                  <li>• 在 <span className="text-[#185abd] font-medium">管理内容</span> → <span className="text-[#185abd] font-medium">应用设置</span> 中配置</li>
+                  <li>• 获取地址：<a href="https://dashscope.console.aliyun.com/" target="_blank" className="text-blue-500 underline">阿里云百炼</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 选项卡栏 */}
       <div className="flex items-center h-[32px] border-b border-[#e1e1e1]">
         {tabs.map((tab) => (
@@ -26,6 +91,8 @@ const Toolbar: React.FC<ToolbarProps> = ({ onSaveClick, onAIClick }) => {
             onClick={() => {
               if (tab === '文件') {
                 onSaveClick()
+              } else if (tab === '帮助') {
+                setShowHelp(true)
               } else {
                 setActiveTab(tab)
               }
