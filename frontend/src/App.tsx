@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const currentWordCount = currentNovel?.content?.length || 0
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-[#e8e8e8] overflow-hidden">
       <Header settings={settings} />
       <Toolbar
         onSaveClick={() => setShowContentManager(true)}

@@ -21,13 +21,11 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
 
     if (!novelContent) return
 
-    // Ctrl+Space 切换中英文
     if (e.ctrlKey && e.code === 'Space') {
       setIsEnglishMode((prev) => !prev)
       return
     }
 
-    // 退格键
     if (e.key === 'Backspace' || e.key === 'Delete') {
       if (showInputMethod && currentInput.length > 0) {
         setCurrentInput((prev) => prev.slice(0, -1))
@@ -39,14 +37,12 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
       return
     }
 
-    // ESC 键取消输入法
     if (e.key === 'Escape') {
       setShowInputMethod(false)
       setCurrentInput('')
       return
     }
 
-    // 空格键确认输入
     if (e.key === ' ') {
       if (showInputMethod && currentInput.length > 0) {
         handleWordSelection(currentInput)
@@ -60,13 +56,11 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
       return
     }
 
-    // 数字键选择候选词
     if (showInputMethod && /^[1-9]$/.test(e.key)) {
       handleWordSelection(currentInput)
       return
     }
 
-    // 字母输入
     if (/^[a-zA-Z]$/.test(e.key)) {
       if (isEnglishMode) {
         handleWordSelection(e.key)
@@ -80,7 +74,6 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
       return
     }
 
-    // 其他字符直接输入
     if (e.key.length === 1) {
       handleWordSelection(e.key)
     }
@@ -90,8 +83,8 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
     if (editorRef.current) {
       const rect = editorRef.current.getBoundingClientRect()
       const lines = Math.floor(currentIndex / 50)
-      const x = rect.left + 16 + ((currentIndex % 50) * 12)
-      const y = rect.top + 16 + lines * 24 + 24
+      const x = rect.left + 96 + ((currentIndex % 50) * 14)
+      const y = rect.top + 96 + lines * 28 + 28
 
       setInputMethodPosition({ x, y })
     }
@@ -184,69 +177,126 @@ const Editor: React.FC<EditorProps> = ({ novelContent, typingSpeed: _typingSpeed
   }, [currentIndex, updateInputMethodPosition])
 
   return (
-    <div className="flex-1 bg-gray-100 p-4 md:p-8 overflow-auto">
-      <div className="max-w-4xl mx-auto bg-white word-shadow min-h-[600px] md:min-h-[800px] p-8 md:p-16 relative word-editor">
-        <div
-          ref={editorRef}
-          className="outline-none min-h-full cursor-text relative"
-          tabIndex={0}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onClick={handleClick}
-        >
-          <div className="whitespace-pre-wrap leading-7 text-base md:text-lg font-serif">
-            {displayedText}
-            {isActive && <span className="inline-block w-0.5 h-6 bg-black cursor-blink ml-0.5" />}
+    <div className="flex-1 bg-[#e8e8e8] overflow-auto relative">
+      {/* 水平标尺 */}
+      <div className="sticky top-0 z-10 bg-[#e8e8e8] h-6 flex justify-center">
+        <div className="w-[816px] h-5 bg-white border-b border-gray-300 flex items-end relative mt-1">
+          <div className="absolute inset-x-0 bottom-0 h-4 flex items-end justify-between px-1">
+            {Array.from({ length: 17 }).map((_, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <span className="text-[8px] text-gray-500 mb-0.5">{i}</span>
+                <div className="w-px h-2 bg-gray-400" />
+              </div>
+            ))}
+          </div>
+          {/* 缩进标记 */}
+          <div className="absolute left-[96px] -top-1 w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-gray-500" />
+          <div className="absolute right-[96px] -top-1 w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-gray-500" />
+        </div>
+      </div>
+
+      {/* 文档区域 */}
+      <div className="flex justify-center py-4 px-4">
+        <div className="relative">
+          {/* A4纸张 */}
+          <div
+            className="bg-white shadow-lg word-editor"
+            style={{
+              width: '816px',
+              minHeight: '1056px',
+              boxShadow: '0 0 10px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            {/* 页面内容区域 - 模拟Word的页边距 */}
+            <div
+              ref={editorRef}
+              className="outline-none cursor-text"
+              style={{
+                padding: '96px',
+                minHeight: '1056px'
+              }}
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onClick={handleClick}
+            >
+              <div
+                className="whitespace-pre-wrap leading-7 text-base font-serif relative"
+                style={{ fontFamily: '宋体, SimSun, serif', fontSize: '14px', lineHeight: '28px' }}
+              >
+                {displayedText}
+                {isActive && (
+                  <span
+                    className="inline-block bg-black cursor-blink"
+                    style={{ width: '1px', height: '18px', marginLeft: '1px' }}
+                  />
+                )}
+              </div>
+
+              {/* 输入法状态指示器 */}
+              {isActive && (
+                <div className="fixed bottom-16 right-4 bg-gray-100 border border-gray-300 px-2 py-1 rounded text-xs z-40 shadow">
+                  {isEnglishMode ? '英' : '中'}
+                </div>
+              )}
+
+              {/* 空白提示 */}
+              {!novelContent && (
+                <div className="text-gray-400 pointer-events-none">
+                  <p className="mb-4" style={{ fontFamily: '微软雅黑, sans-serif' }}>
+                    点击工具栏 <span className="text-[#185abd] font-medium">"管理内容"</span> 按钮添加小说
+                  </p>
+                  <p className="mb-4" style={{ fontFamily: '微软雅黑, sans-serif' }}>
+                    或点击 <span className="text-[#185abd] font-medium">"AI生成"</span> 让AI为你创作小说
+                  </p>
+                  <p className="text-sm text-gray-400 mt-8" style={{ fontFamily: '微软雅黑, sans-serif' }}>
+                    提示: 点击页面任意位置开始打字，Ctrl+Space 切换中英文
+                  </p>
+                </div>
+              )}
+
+              {/* 阅读完成提示 */}
+              {novelContent && currentIndex >= novelContent.length && (
+                <div className="mt-16 text-center text-gray-400" style={{ fontFamily: '微软雅黑, sans-serif' }}>
+                  <p className="text-lg">- 全文完 -</p>
+                  <p className="text-sm mt-2">共 {novelContent.length} 字</p>
+                </div>
+              )}
+
+              {/* 阅读进度提示 */}
+              {novelContent && !isActive && currentIndex < novelContent.length && (
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-white/80 pointer-events-none"
+                  style={{ fontFamily: '微软雅黑, sans-serif' }}
+                >
+                  <div className="text-center">
+                    <div className="text-gray-500 mb-2">点击任意位置继续阅读</div>
+                    <div className="text-sm text-gray-400">
+                      进度: {currentIndex} / {novelContent.length} 字
+                      ({((currentIndex / novelContent.length) * 100).toFixed(1)}%)
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {isActive && (
-            <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-2 py-1 rounded text-xs z-40">
-              {isEnglishMode ? 'EN' : '中'}
-            </div>
-          )}
-
-          {!novelContent && (
-            <div className="absolute top-0 left-0 text-gray-400 pointer-events-none">
-              <p className="text-lg mb-2">点击工具栏"管理"按钮添加小说内容</p>
-              <p className="text-lg mb-2">或点击"AI生成"让AI为你创作小说</p>
-              <p className="text-sm text-gray-500 mt-4">
-                提示: 点击页面任意位置开始打字,Ctrl+Space 切换中英文
-              </p>
-            </div>
-          )}
-
-          {novelContent && currentIndex >= novelContent.length && (
-            <div className="mt-8 text-center text-gray-400">
-              <p className="text-lg">小说已阅读完毕</p>
-              <p className="text-sm mt-2">点击页面重新开始阅读</p>
-            </div>
-          )}
-
-          {novelContent && !isActive && (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-center">
-              <div className="text-lg mb-2">点击页面任意位置开始打字阅读</div>
-              <div className="text-sm">
-                当前进度: {currentIndex} / {novelContent.length} 字 (
-                {((currentIndex / novelContent.length) * 100).toFixed(1)}%)
-              </div>
+          {/* 输入法模拟器 */}
+          {showInputMethod && (
+            <div className="input-method-simulator">
+              <InputMethod
+                position={inputMethodPosition}
+                currentInput={currentInput}
+                onWordSelect={handleWordSelection}
+                onClose={() => {
+                  setShowInputMethod(false)
+                  setCurrentInput('')
+                }}
+              />
             </div>
           )}
         </div>
-
-        {showInputMethod && (
-          <div className="input-method-simulator">
-            <InputMethod
-              position={inputMethodPosition}
-              currentInput={currentInput}
-              onWordSelect={handleWordSelection}
-              onClose={() => {
-                setShowInputMethod(false)
-                setCurrentInput('')
-              }}
-            />
-          </div>
-        )}
       </div>
     </div>
   )
