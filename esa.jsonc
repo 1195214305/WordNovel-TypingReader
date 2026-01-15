@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "assets": {
+    "directory": "frontend/dist"
+  },
+  "functions": {
+    "directory": "functions"
+  },
+  "routes": [
+    {
+      "pattern": "/api/generate-novel",
+      "function": "api/generate-novel"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV_NAMESPACE",
+      "id": "your-kv-namespace-id"
+    }
+  ]
+}
